@@ -204,6 +204,8 @@ LIKE LOWER('%search_term%');
 
 ## Slide 9: Key Features Demo
 
+![Main Dashboard](presentation-screenshots/01-main-dashboard.png)
+
 ### 1. Student Management
 - ✅ Add new students with validation
 - ✅ Edit existing records via modal dialog
@@ -224,6 +226,9 @@ LIKE LOWER('%search_term%');
 ---
 
 ## Slide 10: SQL Debugger Panel
+
+![SQL Debugger Panel](presentation-screenshots/06-sql-debugger-panel.png)
+![SQL Queries Logged](presentation-screenshots/07-sql-queries-logged.png)
 
 ### Features
 - **Query Logging**: Every database operation is logged
@@ -412,12 +417,22 @@ params = [userInput];
 ## Slide 19: Live Demo
 
 ### Demo Flow
-1. **Add Student**: Create new student record with validation
-2. **Search Function**: Real-time filtering demonstration
-3. **Edit Student**: Update existing record via modal
-4. **SQL Debugger**: Show logged queries and performance
-5. **Delete Student**: Remove record with confirmation
-6. **Query Inspection**: Analyze executed SQL statements
+
+#### 1. Add Student
+![Add Student Form](presentation-screenshots/02-add-student-form.png)
+Create new student record with validation
+
+#### 2. Search Function
+![Search Filtering](presentation-screenshots/04-search-filtering.png)
+Real-time filtering demonstration
+
+#### 3. Edit Student
+![Edit Modal](presentation-screenshots/05-edit-modal.png)
+Update existing record via modal
+
+#### 4. View Student Table
+![Student Table](presentation-screenshots/03-student-table.png)
+Display all records with actions
 
 ### Demo Highlights
 - Fast, responsive interface
