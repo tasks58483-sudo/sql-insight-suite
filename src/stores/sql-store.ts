@@ -1,29 +1,54 @@
 import { create } from 'zustand';
-import { QueryLog } from '@/types/schema';
-import { queryLogger } from '@/lib/query-logger';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface QueryLog {
+  id: string;
+  sql: string;
+  params: any[];
+  duration: number;
+  timestamp: Date;
+  operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'UNKNOWN';
+}
 
 interface SqlStore {
   logs: QueryLog[];
   isPanelOpen: boolean;
-  setPanelOpen: (open: boolean) => void;
+  setPanelOpen: (isOpen: boolean) => void;
+  addLog: (log: Omit<QueryLog, 'id' | 'timestamp'>) => void;
+  addLogs: (logs: Omit<QueryLog, 'id' | 'timestamp' | 'operation'>[]) => void;
   clearLogs: () => void;
-  addLog: (log: QueryLog) => void;
 }
 
-export const useSqlStore = create<SqlStore>((set) => {
-  // Subscribe to query logger
-  queryLogger.subscribe((log) => {
-    set((state) => ({ logs: [log, ...state.logs] }));
-  });
+const getOperation = (sql: string): 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'UNKNOWN' => {
+  const operation = sql.trim().substring(0, 6).toUpperCase();
+  if (['SELECT', 'INSERT', 'UPDATE', 'DELETE'].includes(operation)) {
+    return operation as 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
+  }
+  return 'UNKNOWN';
+};
 
-  return {
-    logs: queryLogger.getLogs(),
-    isPanelOpen: false,
-    setPanelOpen: (isPanelOpen) => set({ isPanelOpen }),
-    clearLogs: () => {
-      queryLogger.clearLogs();
-      set({ logs: [] });
-    },
-    addLog: (log) => set((state) => ({ logs: [log, ...state.logs] })),
-  };
-});
+export const useSqlStore = create<SqlStore>((set) => ({
+  logs: [],
+  isPanelOpen: false,
+  setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
+  addLog: (log) =>
+    set((state) => ({
+      logs: [
+        { ...log, id: uuidv4(), timestamp: new Date() },
+        ...state.logs,
+      ],
+    })),
+  addLogs: (logs) =>
+    set((state) => ({
+      logs: [
+        ...logs.map((log) => ({
+          ...log,
+          id: uuidv4(),
+          timestamp: new Date(),
+          operation: getOperation(log.sql),
+        })),
+        ...state.logs,
+      ],
+    })),
+  clearLogs: () => set({ logs: [] }),
+}));

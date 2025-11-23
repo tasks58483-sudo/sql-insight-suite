@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Student } from '@/types/schema';
-import { queryLogger } from '@/lib/query-logger';
+import { useSqlStore } from './sql-store';
+
+const API_URL = 'http://127.0.0.1:5000/api';
 
 interface StudentStore {
   students: Student[];
@@ -10,129 +11,109 @@ interface StudentStore {
   fetchStudents: () => Promise<void>;
   fetchStudent: (id: number) => Promise<Student | null>;
   createStudent: (data: Omit<Student, 'id'>) => Promise<void>;
-  updateStudent: (id: number, data: Partial<Student>) => Promise<void>;
+  updateStudent: (id: number, data: Partial<Omit<Student, 'id'>>) => Promise<void>;
   deleteStudent: (id: number) => Promise<void>;
 }
 
-const mockStudents: Student[] = [
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@university.edu',
-    phone: '555-0101',
-    departmentId: 1,
-    enrollmentYear: 2022,
-  },
-  {
-    id: 2,
-    firstName: 'Jane',
-    lastName: 'Smith',
-    email: 'jane.smith@university.edu',
-    phone: '555-0102',
-    departmentId: 2,
-    enrollmentYear: 2023,
-  },
-  {
-    id: 3,
-    firstName: 'Michael',
-    lastName: 'Johnson',
-    email: 'michael.j@university.edu',
-    phone: '555-0103',
-    departmentId: 1,
-    enrollmentYear: 2021,
-  },
-];
+export const useStudentStore = create<StudentStore>((set, get) => ({
+  students: [],
+  loading: false,
+  error: null,
 
-export const useStudentStore = create<StudentStore>()(
-  persist(
-    (set, get) => ({
-      students: mockStudents,
-      loading: false,
-      error: null,
-
-      fetchStudents: async () => {
-        set({ loading: true, error: null });
-        
-        // Log simulated SQL query
-        queryLogger.addLog(
-          'SELECT',
-          'SELECT * FROM students ORDER BY id DESC',
-          []
-        );
-        
-        // Simulate async operation
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set({ loading: false });
-      },
-
-      fetchStudent: async (id: number) => {
-        queryLogger.addLog(
-          'SELECT',
-          'SELECT * FROM students WHERE id = $1 LIMIT 1',
-          [id]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        const student = get().students.find(s => s.id === id);
-        return student || null;
-      },
-
-      createStudent: async (data) => {
-        const newId = Math.max(0, ...get().students.map(s => s.id)) + 1;
-        const newStudent = { ...data, id: newId };
-        
-        queryLogger.addLog(
-          'INSERT',
-          'INSERT INTO students (first_name, last_name, email, phone, department_id, enrollment_year) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [data.firstName, data.lastName, data.email, data.phone, data.departmentId, data.enrollmentYear]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          students: [...state.students, newStudent],
-        }));
-      },
-
-      updateStudent: async (id, data) => {
-        const fields = Object.keys(data);
-        const values = Object.values(data);
-        const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
-        
-        queryLogger.addLog(
-          'UPDATE',
-          `UPDATE students SET ${setClause} WHERE id = $${fields.length + 1}`,
-          [...values, id]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          students: state.students.map(s =>
-            s.id === id ? { ...s, ...data } : s
-          ),
-        }));
-      },
-
-      deleteStudent: async (id) => {
-        queryLogger.addLog(
-          'DELETE',
-          'DELETE FROM students WHERE id = $1',
-          [id]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          students: state.students.filter(s => s.id !== id),
-        }));
-      },
-    }),
-    {
-      name: 'student-storage',
+  fetchStudents: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_URL}/students`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+      const result = await response.json();
+      set({ students: result.data, loading: false });
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage, loading: false });
     }
-  )
-);
+  },
+
+  fetchStudent: async (id: number) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_URL}/students/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch student');
+      }
+      const result = await response.json();
+      set({ loading: false });
+      useSqlStore.getState().addLogs(result.query_logs);
+      return result.data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage, loading: false });
+      return null;
+    }
+  },
+
+  createStudent: async (data) => {
+    try {
+      const response = await fetch(`${API_URL}/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create student');
+      }
+      const result = await response.json();
+      set((state) => ({
+        students: [result.data, ...state.students],
+      }));
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+
+  updateStudent: async (id, data) => {
+    try {
+      const response = await fetch(`${API_URL}/students/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update student');
+      }
+      const result = await response.json();
+      set((state) => ({
+        students: state.students.map((s) =>
+          s.id === id ? { ...s, ...result.data } : s
+        ),
+      }));
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+
+  deleteStudent: async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/students/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete student');
+      }
+       const result = await response.json();
+      set((state) => ({
+        students: state.students.filter((s) => s.id !== id),
+      }));
+       useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+}));
