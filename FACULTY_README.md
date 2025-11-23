@@ -140,10 +140,8 @@ Each query log displays:
 
 ## Data Persistence
 
-- All student data is stored locally in your browser
-- Data persists between sessions
-- Clearing browser data will delete all records
-- **Important**: For production use, connect to a proper backend database
+- All student data is stored in a central SQLite database.
+- The database is managed by a Python/Flask backend server.
 
 ## Future Enhancements
 
