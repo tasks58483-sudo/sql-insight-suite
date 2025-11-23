@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Database, Download, Upload, Building2, BookOpen, GraduationCap, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSqlStore } from '@/stores/sql-store';
@@ -9,14 +10,17 @@ import { exportToJSON, exportToCSV, importFromJSON, importFromCSV } from '@/lib/
 import { useStudentStore } from '@/stores/student-store';
 import { useDepartmentStore } from '@/stores/department-store';
 import { useToast } from '@/hooks/use-toast';
-import { useRef } from 'react';
 
 const Index = () => {
   const { setPanelOpen } = useSqlStore();
-  const { students } = useStudentStore();
+  const { students, fetchStudents } = useStudentStore();
   const { departments } = useDepartmentStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const handleExport = (type: 'json' | 'csv') => {
     if (type === 'json') {

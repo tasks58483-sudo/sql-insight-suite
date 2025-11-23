@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Course } from '@/types/schema';
-import { queryLogger } from '@/lib/query-logger';
+import { useSqlStore } from './sql-store';
+
+const API_URL = 'http://127.0.0.1:5000/api';
 
 interface CourseStore {
   courses: Course[];
@@ -13,83 +14,87 @@ interface CourseStore {
   deleteCourse: (code: string) => Promise<void>;
 }
 
-const mockCourses: Course[] = [
-  { code: 'CS101', name: 'Introduction to Programming', credits: 3, departmentId: 1, description: 'Basic programming concepts' },
-  { code: 'CS201', name: 'Data Structures', credits: 4, departmentId: 1, description: 'Advanced data structures and algorithms' },
-  { code: 'MATH101', name: 'Calculus I', credits: 4, departmentId: 2, description: 'Differential calculus' },
-  { code: 'PHYS101', name: 'Classical Mechanics', credits: 3, departmentId: 3, description: 'Newton\'s laws and mechanics' },
-];
+export const useCourseStore = create<CourseStore>((set) => ({
+  courses: [],
+  loading: false,
+  error: null,
 
-export const useCourseStore = create<CourseStore>()(
-  persist(
-    (set, get) => ({
-      courses: mockCourses,
-      loading: false,
-      error: null,
-
-      fetchCourses: async () => {
-        set({ loading: true, error: null });
-        
-        queryLogger.addLog(
-          'SELECT',
-          'SELECT * FROM courses ORDER BY code ASC',
-          []
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        set({ loading: false });
-      },
-
-      createCourse: async (data) => {
-        queryLogger.addLog(
-          'INSERT',
-          'INSERT INTO courses (code, name, credits, description, department_id, faculty_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [data.code, data.name, data.credits, data.description, data.departmentId, data.facultyId]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          courses: [...state.courses, data],
-        }));
-      },
-
-      updateCourse: async (code, data) => {
-        const fields = Object.keys(data);
-        const values = Object.values(data);
-        const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
-        
-        queryLogger.addLog(
-          'UPDATE',
-          `UPDATE courses SET ${setClause} WHERE code = $${fields.length + 1}`,
-          [...values, code]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          courses: state.courses.map(c =>
-            c.code === code ? { ...c, ...data } : c
-          ),
-        }));
-      },
-
-      deleteCourse: async (code) => {
-        queryLogger.addLog(
-          'DELETE',
-          'DELETE FROM courses WHERE code = $1',
-          [code]
-        );
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        set((state) => ({
-          courses: state.courses.filter(c => c.code !== code),
-        }));
-      },
-    }),
-    {
-      name: 'course-storage',
+  fetchCourses: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_URL}/courses`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch courses');
+      }
+      const result = await response.json();
+      set({ courses: result.data, loading: false });
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage, loading: false });
     }
-  )
-);
+  },
+
+  createCourse: async (data) => {
+    try {
+      const response = await fetch(`${API_URL}/courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create course');
+      }
+      const result = await response.json();
+      set((state) => ({
+        courses: [result.data, ...state.courses],
+      }));
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+
+  updateCourse: async (code, data) => {
+    try {
+      const response = await fetch(`${API_URL}/courses/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update course');
+      }
+      const result = await response.json();
+      set((state) => ({
+        courses: state.courses.map((c) =>
+          c.code === code ? { ...c, ...result.data } : c
+        ),
+      }));
+      useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+
+  deleteCourse: async (code) => {
+    try {
+      const response = await fetch(`${API_URL}/courses/${code}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete course');
+      }
+       const result = await response.json();
+      set((state) => ({
+        courses: state.courses.filter((c) => c.code !== code),
+      }));
+       useSqlStore.getState().addLogs(result.query_logs);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: errorMessage });
+    }
+  },
+}));
