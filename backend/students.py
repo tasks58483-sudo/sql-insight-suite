@@ -1,5 +1,6 @@
 from flask import Blueprint, request
 from backend.db import get_db_connection, with_query_logs
+from backend.utils import format_record, format_records
 
 bp = Blueprint('students', __name__, url_prefix='/api/students')
 
@@ -7,17 +8,17 @@ bp = Blueprint('students', __name__, url_prefix='/api/students')
 def get_students():
     """Get all students."""
     conn = get_db_connection()
-    students = conn.execute('SELECT id, first_name as firstName, last_name as lastName, email, phone, department_id as departmentId, enrollment_year as enrollmentYear FROM students').fetchall()
-    return with_query_logs([dict(student) for student in students])
+    students = conn.execute('SELECT * FROM students').fetchall()
+    return with_query_logs(format_records(students))
 
 @bp.route('/<int:id>', methods=['GET'])
 def get_student(id):
     """Get a single student by ID."""
     conn = get_db_connection()
-    student = conn.execute('SELECT id, first_name as firstName, last_name as lastName, email, phone, department_id as departmentId, enrollment_year as enrollmentYear FROM students WHERE id = ?', (id,)).fetchone()
+    student = conn.execute('SELECT * FROM students WHERE id = ?', (id,)).fetchone()
     if student is None:
         return with_query_logs({'error': 'Student not found'}, 404)
-    return with_query_logs(dict(student))
+    return with_query_logs(format_record(student))
 
 @bp.route('/', methods=['POST'])
 def create_student():
@@ -35,16 +36,8 @@ def create_student():
         conn.commit()
         new_student_id = cursor.lastrowid
 
-        new_student = {
-            'id': new_student_id,
-            'firstName': data['firstName'],
-            'lastName': data['lastName'],
-            'email': data['email'],
-            'phone': data.get('phone'),
-            'departmentId': data.get('departmentId'),
-            'enrollmentYear': data.get('enrollmentYear')
-        }
-        return with_query_logs(new_student, 201)
+        new_student = conn.execute('SELECT * FROM students WHERE id = ?', (new_student_id,)).fetchone()
+        return with_query_logs(format_record(new_student), 201)
     except conn.IntegrityError:
         return with_query_logs({'error': 'Email already exists'}, 409)
     except Exception as e:
@@ -78,8 +71,8 @@ def update_student(id):
         )
         conn.commit()
 
-        updated_student = conn.execute('SELECT id, first_name as firstName, last_name as lastName, email, phone, department_id as departmentId, enrollment_year as enrollmentYear FROM students WHERE id = ?', (id,)).fetchone()
-        return with_query_logs(dict(updated_student))
+        updated_student = conn.execute('SELECT * FROM students WHERE id = ?', (id,)).fetchone()
+        return with_query_logs(format_record(updated_student))
     except conn.IntegrityError:
         return with_query_logs({'error': 'Email already exists'}, 409)
     except Exception as e:
@@ -98,4 +91,4 @@ def delete_student(id):
         conn.commit()
         return with_query_logs({'message': 'Student deleted successfully'}, 200)
     except Exception as e:
-        return with_query_logs({'error': str(e)}), 500
+        return with_query_logs({'error': str(e)}, 500)

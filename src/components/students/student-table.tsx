@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Pencil, Trash2, Search } from 'lucide-react';
 import { useStudentStore } from '@/stores/student-store';
 import { Student } from '@/types/schema';
@@ -35,15 +35,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 export const StudentTable = () => {
-  const { students, loading, fetchStudents, updateStudent, deleteStudent } = useStudentStore();
+  const { students, loading, updateStudent, deleteStudent } = useStudentStore();
   const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
 
   const filteredStudents = useMemo(() => {
     if (!searchQuery.trim()) return students;

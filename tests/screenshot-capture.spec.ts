@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Student Management System - Screenshot Capture', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
-    await page.goto('http://localhost:8080');
+    await page.goto('http://localhost:8085');
     await page.waitForLoadState('networkidle');
   });
 
@@ -38,10 +38,18 @@ test.describe('Student Management System - Screenshot Capture', () => {
   });
 
   test('04 - Search Functionality', async ({ page }) => {
+    const timestamp = new Date().getTime();
+    // Add a student to search for
+    await page.getByLabel('First Name *').fill('Search');
+    await page.getByLabel('Last Name *').fill('Student');
+    await page.getByLabel('Email *').fill(`search.student.${timestamp}@university.edu`);
+    await page.locator('button:has-text("Add Student")').click();
+    await page.waitForTimeout(500);
+
     // Click and type in search box
     const searchBox = page.getByPlaceholder('Search students...');
     await searchBox.click();
-    await searchBox.fill('john');
+    await searchBox.fill('search');
     
     // Wait for filter results
     await page.waitForTimeout(500);
@@ -53,6 +61,14 @@ test.describe('Student Management System - Screenshot Capture', () => {
   });
 
   test('05 - Edit Student Modal', async ({ page }) => {
+    const timestamp = new Date().getTime();
+    // Add a student to edit
+    await page.getByLabel('First Name *').fill('Edit');
+    await page.getByLabel('Last Name *').fill('Student');
+    await page.getByLabel('Email *').fill(`edit.student.${timestamp}@university.edu`);
+    await page.locator('button:has-text("Add Student")').click();
+    await page.waitForTimeout(500);
+
     // Click the first edit button
     await page.locator('button[aria-label="Edit student"]').first().click();
     
@@ -81,8 +97,12 @@ test.describe('Student Management System - Screenshot Capture', () => {
   });
 
   test('07 - SQL Debugger with Queries', async ({ page }) => {
-    // Perform some actions to generate queries
-    await page.getByPlaceholder('Search students...').fill('jane');
+    const timestamp = new Date().getTime();
+    // Add a student to generate queries
+    await page.getByLabel('First Name *').fill('Query');
+    await page.getByLabel('Last Name *').fill('Student');
+    await page.getByLabel('Email *').fill(`query.student.${timestamp}@university.edu`);
+    await page.locator('button:has-text("Add Student")').click();
     await page.waitForTimeout(300);
     
     // Open SQL Debugger
@@ -97,10 +117,11 @@ test.describe('Student Management System - Screenshot Capture', () => {
   });
 
   test('08 - Add Student Process', async ({ page }) => {
+    const timestamp = new Date().getTime();
     // Fill in the form
     await page.getByLabel('First Name *').fill('Alice');
     await page.getByLabel('Last Name *').fill('Williams');
-    await page.getByLabel('Email *').fill('alice.williams@university.edu');
+    await page.getByLabel('Email *').fill(`alice.williams.${timestamp}@university.edu`);
     await page.getByLabel('Phone').fill('555-0104');
     await page.getByLabel('Department ID').fill('3');
     await page.getByLabel('Enrollment Year').fill('2024');

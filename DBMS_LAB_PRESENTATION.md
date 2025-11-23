@@ -195,11 +195,9 @@ Enrollments:  | id | student_id | course_code | grade |
 - Zustand (State Management)
 - React Hook Form
 
-**Backend Concepts**
-- RESTful API Pattern
-- Query Logger
-- Transaction Management
-- LocalStorage Persistence
+**Backend**
+- Python/Flask
+- SQLite
 
 **Database Concepts**
 - Normalization (3NF)
@@ -301,17 +299,17 @@ Built a comprehensive Student Management System demonstrating core DBMS principl
 
 ### Common Questions & Answers
 
-**Q: Why not use a real backend database?**  
-A: For lab demonstration, we used client-side storage. Production would use PostgreSQL/MySQL with proper authentication and security.
+**Q: Why did you choose a Python/Flask backend?**
+A: For this lab project, we wanted to demonstrate our ability to build a full-stack application with a real backend. Python/Flask is a great choice for this because it's lightweight, easy to learn, and has a large ecosystem of libraries.
 
 **Q: How does the SQL Debugger work?**  
-A: It intercepts all database operations through a logger class, capturing SQL, parameters, and execution time, then displays them in real-time.
+A: It intercepts all database operations on the backend, capturing SQL, parameters, and execution time, then displays them in real-time on the frontend.
 
 **Q: Can this handle thousands of students?**  
-A: Current implementation is client-side optimized. With backend database, proper indexing, and pagination, it can scale significantly.
+A: Yes, with the new backend database, proper indexing, and pagination, it can scale to handle a large number of students.
 
 **Q: What about security?**  
 A: We implemented parameterized queries to prevent SQL injection, input validation, and error handling without exposing database structure.
 
 **Q: What were the biggest challenges?**  
-A: Real-time search optimization, maintaining data consistency across operations, and implementing the SQL debugging system without performance impact.
+A: Integrating the frontend with the new backend, implementing the real-time SQL debugging system, and ensuring data consistency across the application.
